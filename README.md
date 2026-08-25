@@ -28,7 +28,7 @@
 |---|---|
 | 데이터 원천 | MIR 공식 배포본(`http://mirlab.org/dataSet/public/MIR-WM811K.zip`)의 `WM811K.pkl`. 라벨된 웨이퍼 172,950장 |
 | Gold 테스트셋 | `StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=20260825)`, `y=label9`, `groups=lot_id`, fold 0의 test 인덱스. 34,615장 (라벨 전체의 20.01%). 어떤 셀의 학습·분할·cap 추출에도 쓰이지 않음 |
-| Gold 인덱스 해시 | sha1 앞 12자리 `3a6030ac2ff1` (`data/processed/gold_indices.npy`) |
+| Gold 인덱스 해시 | `sha1(np.load("data/processed/gold_indices.npy").tobytes())` 앞 12자리 = `3a6030ac2ff1` (배열 바이트 기준. 파일 전체 해시가 아님) |
 | 리사이즈 | 64×64, 중심 정렬 nearest-neighbour (`floor((i+0.5)*H/64)`, 종횡비 보존 없음) |
 | 입력 인코딩 | 배치 시점 GPU에서 3채널 one-hot `[B,3,64,64]` float32 (die 없음/정상/불량) |
 | 모델 | `SmallCNN` — conv(3→32)-BN-ReLU-Pool → conv(32→64)-BN-ReLU-Pool → conv(64→128)-BN-ReLU-Pool → conv(128→128)-BN-ReLU → GAP → Dropout(0.3) → Linear. **242,345 파라미터** |

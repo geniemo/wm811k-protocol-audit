@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wm811k-audit"
+version = "0.1.0"
+description = "How much does the evaluation protocol move reported performance on WM-811K? Fixed-model factorial audit."
+requires-python = ">=3.11"
+dependencies = ["numpy", "pandas", "pyarrow", "scikit-learn", "scipy", "matplotlib", "torch", "tqdm"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

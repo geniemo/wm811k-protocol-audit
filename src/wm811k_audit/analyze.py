@@ -189,7 +189,8 @@ def plot_main_effects(effects: dict, out: Path):
             lv = effects[metric]["levels"][axis]
             xs = np.arange(len(lv))
             ax.plot(xs, list(lv.values()), marker="o", ms=6, lw=2, color=color, label=label)
-        ax.set_xticks(np.arange(len(lv)), [AXIS_LABELS[axis][k] for k in lv], rotation=0)
+        labels = [AXIS_LABELS[axis][k].replace(" (", "\n(").replace("/class", "\n/class") for k in lv]
+        ax.set_xticks(np.arange(len(lv)), labels, rotation=0, fontsize=8)
         ax.set_title(f"axis: {axis}", fontsize=10, loc="left")
         ax.grid(axis="x", visible=False)
     axes[0].set_ylabel("level mean over the other axes")

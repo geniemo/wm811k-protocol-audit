@@ -74,6 +74,8 @@ def test_build_labeled_table_singletons_and_lot_num(processed):
     single = meta[meta["is_singleton_lot"]]
     assert len(single) == 3 and single["lot_id"].str.startswith("__singleton_").all()
     assert single["lot_num"].isna().all()
+    assert single["lot_name"].isna().all()  # singleton rows have missing lot_name
+    assert meta.loc[~meta["is_singleton_lot"], "lot_name"].notna().all()  # non-singleton rows have non-missing lot_name
     assert meta.loc[meta["lot_name"] == "lot7", "lot_num"].eq(7).all()
 
 
@@ -91,6 +93,9 @@ def test_save_load_roundtrip(processed, tmp_path):
     assert (m2 == maps64).all()
     pd.testing.assert_frame_equal(meta.reset_index(drop=True), meta2)
     assert (tmp_path / "summary.json").exists()
+    # Verify lot_name missing-value representation survives the parquet roundtrip
+    assert meta2.loc[meta2["is_singleton_lot"], "lot_name"].isna().all()
+    assert meta2["lot_name"].dtype == meta["lot_name"].dtype  # dtype must survive roundtrip
 
 
 def test_summarize_keys(processed):

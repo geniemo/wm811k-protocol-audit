@@ -1,0 +1,28 @@
+# data (never commit raw or processed wafer maps)
+data/
+*.pkl
+*.zip
+*.npz
+*.mat
+
+# experiment outputs that are large / regenerable
+results/runs/
+results/**/*.pt
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+build/
+dist/
+
+# env / editor
+.env
+.venv/
+.vscode/
+.idea/
+
+# personal notes (interview prep) — not part of the public repo
+docs/interview_notes.md

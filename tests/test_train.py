@@ -57,3 +57,9 @@ def test_batch_size_is_capped_by_train_size():
     model = SmallCNN(2)
     log = train_fixed(model, maps, y, np.arange(10), TrainConfig(steps=3, batch_size=256, log_every=3), seed=0, device="cpu")
     assert len(log) == 1
+
+
+def test_resnet18_adapted_shape():
+    m = build_model("resnet18", 9)
+    assert m(torch.zeros(2, 3, 64, 64)).shape == (2, 9)
+    assert count_params(m) > 10_000_000

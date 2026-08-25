@@ -24,9 +24,26 @@ class SmallCNN(nn.Module):
         return self.head(self.features(x))
 
 
+class ResNet18Adapted(nn.Module):
+    """torchvision resnet18 from scratch; 3x3 stride-1 stem and no stem max-pool so 64x64 inputs keep an 8x8 final map."""
+
+    def __init__(self, n_classes: int, in_ch: int = 3):
+        super().__init__()
+        from torchvision.models import resnet18
+        net = resnet18(weights=None, num_classes=n_classes)
+        net.conv1 = nn.Conv2d(in_ch, 64, 3, stride=1, padding=1, bias=False)
+        net.maxpool = nn.Identity()
+        self.net = net
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)
+
+
 def build_model(name: str, n_classes: int) -> nn.Module:
     if name == "smallcnn":
         return SmallCNN(n_classes)
+    if name == "resnet18":
+        return ResNet18Adapted(n_classes)
     raise ValueError(f"unknown model {name!r}")
 
 

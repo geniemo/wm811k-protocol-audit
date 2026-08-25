@@ -12,7 +12,7 @@ def classification_metrics(y_true, y_pred, n_classes: int) -> dict:
     y_pred = np.asarray(y_pred)
     labels = list(range(n_classes))
     return dict(
-        macro_f1=float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
+        macro_f1=float(f1_score(y_true, y_pred, labels=labels, average="macro", zero_division=0)),
         bacc=float(balanced_accuracy_score(y_true, y_pred)),
         acc=float(accuracy_score(y_true, y_pred)),
         per_class_f1=f1_score(y_true, y_pred, labels=labels, average=None, zero_division=0).tolist(),

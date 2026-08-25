@@ -2,13 +2,13 @@
 
 모델·학습 절차·seed 집합을 전부 고정한 채, **평가 프로토콜(분할 방식 / 클래스 구성 / 표본 선택)만** 바꿔가며 보고되는 웨이퍼 결함 분류 성능이 얼마나 이동하는지 측정한 실험입니다. 측정 대상은 모델이 아니라 **프로토콜이 성능 숫자에 기여하는 크기**입니다.
 
-> **English abstract.** WM-811K wafer-map defect classification papers report very different held-out accuracies, but they also use very different train/test protocols (original vendor split, random split, lot-disjoint split; 8 or 9 classes; capped or uncapped per-class sample counts). This project holds the model, training recipe, and random seeds fixed and varies only the evaluation protocol across 18 cells (3 seeds each), reporting every cell against both its own test set and one common lot-disjoint gold set. The representative number — lot-disjoint split, 9 classes, no cap — is **0.839 ± 0.005 gold macro-F1**. Somewhat against the project's own working hypothesis, lot-leakage from a random split moves the score by only +0.007 on this dataset, smaller than seed-to-seed noise (mean std 0.0112); per-class sample-count capping moves it by up to −0.225. The original vendor split is shown to be a materially different protocol (0.440 vs 0.775 macro-F1 for the identical model), which is the clearest demonstration of the project's point: the same model reads as 0.44 or 0.78 depending purely on which test set is reported.
+> **English abstract.** WM-811K wafer-map defect classification papers report very different held-out accuracies, but they also use very different train/test protocols (original vendor split, random split, lot-disjoint split; 8 or 9 classes; capped or uncapped per-class sample counts). This project holds the model, training recipe, and random seeds fixed and varies only the evaluation protocol across 18 cells (3 seeds each), reporting every cell against both its own test set and one common lot-disjoint gold set. The representative number — lot-disjoint split, 9 classes, no cap — is **0.839 ± 0.005 gold macro-F1**. Somewhat against the project's own working hypothesis, lot-leakage from a random split moves the score by +0.007 (paired over 3 seeds, sign-consistent in all three but within 2× the seed noise of the two cells actually compared, ≈0.004) — at n=3 this bounds the leakage effect at roughly ≤0.01 rather than distinguishing it from zero; per-class sample-count capping moves it by up to −0.225, an order of magnitude larger and well outside that noise band. The original vendor split is shown to be a materially different protocol — **≈0.44 vs 0.659 9-class macro-F1** for the identical model on a common lot-disjoint test set (0.775 if the metric is narrowed to defect-F1 over the 8 defect classes only; the ≈0.44 own-test figure itself swings by roughly ±0.05 between logged checkpoints of the same run — see below) — which is the clearest demonstration of the project's point: the same model reads as ≈0.44 or 0.66 macro-F1 (or 0.78 under a quietly narrower metric) depending purely on which test set, and which metric, is reported.
 
 ## 핵심 결과 (숫자 먼저, 조건은 그다음)
 
 1. **0.839 ± 0.005** — 가장 엄격한 조건(`A3-B1-C1`: lot-group 분할, 9 클래스, cap 없음)에서 공통 gold 테스트셋에 대한 9-class macro-F1 (3 seed 평균 ± 표준편차). 배포 상황에 가장 가까운 대표값입니다.
 2. 같은 모델·같은 학습으로 **분할만 랜덤(lot 혼입 허용)으로 바꾼 조건(`A2-B1-C1`)**의 as-reported macro-F1은 **0.843**, lot-group 분할(`A3-B1-C1`)의 as-reported macro-F1은 **0.836**입니다.
-3. 격차는 **+0.007**로, seed 간 표준편차 평균(0.0112)보다 작습니다 — 즉 이 데이터셋·이 모델 규모에서는 **lot 혼입 여부가 성능 숫자에 미치는 영향이 seed 노이즈와 구분되지 않습니다.** (반면 클래스당 표본 수를 줄이는 조작은 최대 −0.225까지 움직입니다 — 아래 "핵심 비교" 참고.)
+3. 격차는 **+0.007**(3 seed 페어드 평균, sd 0.003; 부호는 +0.0105/+0.0052/+0.0051로 세 seed 모두 일관)입니다. 표 전체 평균 seed std(0.0112)는 이 비교와 무관한 C3 등 노이즈가 큰 셀들에 좌우된 값이라 이 격차의 기준으로 쓸 수 없습니다 — 실제로 비교되는 두 셀(`A2-B1-C1`, `A3-B1-C1`)만의 seed std는 각각 0.004로, 격차(0.007)는 그 2배(0.0086) 안쪽입니다. 계획서 §5 규칙(격차 < 2·std ⇒ 노이즈와 구분 불가)은 이 기준으로도 여전히 성립하지만, 정확히는 **"0이다"가 아니라 "n=3에서는 누수 효과를 대략 ≤0.01로만 상한 지을 수 있다"**는 뜻입니다. (반면 클래스당 표본 수를 줄이는 조작은 최대 −0.225까지 움직입니다 — 아래 "핵심 비교" 참고.)
 
 ## 왜 이 실험인가
 
@@ -62,7 +62,9 @@
 | A1 원본 (`A1-B1-C1`, 참고) | 0.440 ± 0.002 | 0.550 ± 0.003 | 0.775 ± 0.004 |
 | A4 lot-순서 (`A4-B1-C1`, 보조·참고) | 0.571 ± 0.026 | 0.558 ± 0.032 | 0.826 ± 0.003 |
 
-- as-reported 격차(A2 − A3): **+0.007** — seed std 평균(0.0112)보다 작음 → 노이즈와 구분 불가.
+**A1/A4 own macro-F1의 ±에 관한 참고**: 이 ±는 고정된 마지막 스텝(8,000)에서 3 seed 사이의 표준편차일 뿐입니다. 같은 run 안에서도 값은 훨씬 더 흔들립니다 — `A1-B1-C1-s0`의 마지막 네 로그 체크포인트(step 5k~8k)의 own macro-F1은 0.420 / 0.506 / 0.428 / 0.438(`results/runs/A1-B1-C1-s0/train_log.csv`)이고, step 6,000 하나만 보면 세 seed가 0.506 / 0.455 / 0.424로 흩어집니다. A1·A4의 own 테스트셋이 비층화(A1은 93% none)이기 때문입니다. 그래서 이 문서 전체에서 A1/A4의 own 수치는 소수점 셋째 자리까지의 안정된 측정값이 아니라 **≈0.44, ≈0.57** 정도로 읽는 것이 맞습니다. (반면 gold 열은 gold셋이 층화·고정이라 이 불안정성이 없습니다.)
+
+- as-reported 격차(A2 − A3): **+0.007**(3 seed 페어드, sd 0.003; +0.0105/+0.0052/+0.0051로 부호 일관). 이 두 셀의 seed std는 각각 0.004(A2)·0.004(A3)이며 격차는 그 2배(0.0086) 안쪽입니다 — 계획서 §5 규칙대로 노이즈와 완전히 구분되지는 않지만, 부호가 3/3 일관되므로 **누수 효과를 대략 ≤0.01로 상한 지을 뿐 0이라고 단정할 수는 없습니다.**
 - 모델 내부 own-gold 격차(같은 가중치, 자기 테스트셋 − gold): **A2 = +0.009, A3 = −0.001**. A3는 정의상 own ≈ gold여야 하고 실제로 거의 0 — sanity check 통과. A2도 부풀림이 매우 작음.
 - 최근접 이웃 해밍 거리(A2 vs A3, `nn_hamming_A2_vs_A3.png`)의 중앙값도 거의 같습니다(랜덤 약 361, lot-group 약 355) — 테스트 웨이퍼가 학습 셋에서 얼마나 가까운 이웃을 찾는지가 두 분할에서 비슷하다는 뜻이고, 위 결과가 왜 작은지를 설명합니다.
 - `lot_share_rate`(랜덤 분할 테스트 웨이퍼 중 같은 lot의 다른 웨이퍼가 학습에 있는 비율)는 0.98로 실제로는 랜덤 분할이 lot을 거의 다 공유합니다. 그럼에도 성능 격차는 작습니다.
@@ -79,7 +81,7 @@
 | `A3-B1-C3` (balanced, 클래스당 ≈119장) | 0.650 ± 0.021 | 0.605 ± 0.006 |
 
 - as-reported 격차: **−0.186**. gold 격차: **−0.225**. 두 열 모두 큰 폭으로 내려가며, gold 쪽이 더 큽니다 — 표본 선택 축소는 학습 데이터 효과와 테스트셋 효과 둘 다에 작용합니다.
-- 분할(축 A) 격차(+0.007)와 비교하면, **표본 선택(축 C)이 성능을 훨씬 더 크게 움직이는 요인**입니다.
+- 분할(축 A) 격차 — own macro-F1 **+0.007**, gold defect-F1 **−0.003** — 와 cap(축 C) 격차 — own macro-F1 **−0.186**, gold defect-F1 **−0.225** — 를 같은 두 지표로 나란히 놓고 비교하면, **표본 선택(축 C)이 성능을 훨씬 더 크게, 그리고 두 지표 모두에서 일관되게 움직이는 요인**임을 알 수 있습니다.
 
 ![핵심 비교 2: cap](results/figures/core_pair_cap.png)
 
@@ -127,9 +129,9 @@ own macro-F1 기준(참고, as-reported는 클래스 집합이 셀마다 달라 
 | A3-B2-C1 | lot-group | 8 defect classes | no cap | 16,333 | 0.823 ± 0.003 | 0.829 ± 0.008 | — | 0.00 | 0.006 |
 | A3-B2-C2 | lot-group | 8 defect classes | cap 5000/class | 14,138 | 0.829 ± 0.005 | 0.827 ± 0.003 | — | 0.00 | 0.005 |
 | A3-B2-C3 | lot-group | 8 defect classes | balanced (min class) | 761 | 0.723 ± 0.038 | 0.616 ± 0.006 | — | 0.00 | 0.012 |
-| A4-B1-C1 (보조) | A4 | 9 classes | no cap | 110,665 | 0.571 ± 0.026 | 0.826 ± 0.003 | 0.830 ± 0.002 | 0.00 | 0.000 |
+| A4-B1-C1 (보조) | lot-ordered | 9 classes | no cap | 110,665 | 0.571 ± 0.026 | 0.826 ± 0.003 | 0.830 ± 0.002 | 0.00 | 0.000 |
 
-`lot_share`는 own-test 중 자기 lot의 다른 웨이퍼가 학습셋에 있는 비율, `dup_rate`는 own-test 중 학습셋에 정확히 같은 원본 맵이 있는 비율(양품 위주). A3/A4는 정의상 `lot_share=0.00`이며 이 셀들에서 own defect-F1과 gold defect-F1이 거의 일치합니다 — 위 sanity check와 같은 사실입니다.
+`lot_share`는 own-test 중 자기 lot의 다른 웨이퍼가 학습셋에 있는 비율, `dup_rate`는 own-test 중 학습셋에 정확히 같은 원본 맵이 있는 비율(양품 위주). A3/A4는 정의상 `lot_share=0.00`이며 이 셀들에서 own defect-F1과 gold defect-F1이 거의 일치합니다 — 위 sanity check와 같은 사실입니다. A1·A4 행의 own macro-F1 ±는 마지막 스텝에서의 seed 간 편차일 뿐이라는 점은 "핵심 비교 ①" 절의 참고를 보십시오.
 
 **주목할 두 셀**: `A1-B1-C1`은 as-reported macro-F1이 0.440에 불과하지만 같은 가중치를 gold로 평가하면 0.775, gold 9클래스 macro-F1은 0.659입니다 — 원본 Test 라벨의 93%가 none이고 비층화되어 있으며, 원본 분할은 라벨 데이터의 31%만 학습에 씁니다. `A4-B1-C1`도 own macro-F1은 0.571로 A1과 비슷하게 낮지만 gold 9클래스 macro-F1은 0.830으로 A3와 비슷합니다 — **둘 다 모델이 아니라 테스트셋 구성이 만든 결과**입니다.
 
@@ -140,13 +142,15 @@ own macro-F1 기준(참고, as-reported는 클래스 집합이 셀마다 달라 
 | mean | 0.0112 | 0.0051 |
 | max | 0.0383 | 0.0163 |
 
-핵심 비교 ①의 격차(+0.007)는 이 표의 own macro-F1 평균 seed std(0.0112)보다 작습니다. 반면 핵심 비교 ②의 격차(−0.186 / −0.225)는 seed std보다 훨씬 큽니다 — 표본 선택 효과는 노이즈로 설명되지 않습니다.
+이 표의 평균(0.0112)·최대(0.0383)는 18개 core 셀 + A4를 모두 포함한 값이며, C3(균형 표본, 최소 857 웨이퍼) 셀들의 큰 분산이 평균을 끌어올립니다(core 18개만이면 0.0104). **핵심 비교 ①에서 실제로 비교되는 두 셀**(`A2-B1-C1`, `A3-B1-C1`)만의 own macro-F1 seed std는 각각 **0.0039, 0.0043**으로 이 표의 평균보다 훨씬 작고, 그 기준으로 봐도 격차(+0.007)는 2×std(0.0086) 안쪽입니다 — "0과 구분 불가"가 아니라 "대략 ≤0.01로 상한 지을 수 있다"는 뜻입니다. 반면 핵심 비교 ②의 격차(−0.186 / −0.225)는 어떤 기준의 seed std보다도 훨씬 커서, 표본 선택 효과는 노이즈로 설명되지 않습니다.
 
-### Confusion matrix — `A3-B1-C1`, gold 9클래스 (3 seed 평균)
+### Confusion matrix — `A3-B1-C1`, gold 9클래스 (3 seed 합산)
 
 ![Confusion matrix](results/figures/confusion_gold_A3-B1-C1.png)
 
-클래스별 recall(%, 3 seed 평균): none 100, Edge-Ring 96, Random 95, Near-full 93, Center 83, Edge-Loc 72, Donut 71, Loc 59, Scratch 56.
+전체 숫자(9×9 row-normalised %, per-class recall, gold support)는 [`results/tables/confusion_gold_A3-B1-C1.md`](results/tables/confusion_gold_A3-B1-C1.md)에 커밋되어 있습니다 — `results/runs/`는 gitignore 대상이라, 클론한 저장소에서 아래 수치들을 확인할 수 있는 유일한 출처입니다.
+
+클래스별 recall(%, 3 seed 합산): none 100, Edge-Ring 96, Random 95, Near-full 93, Center 83, Edge-Loc 72, Donut 71, Loc 59, Scratch 56.
 
 실험 설계 단계에서는 Edge-Loc과 Scratch가 서로 혼동될 것이라 예상했지만, 실제 confusion matrix가 보여주는 지배적인 실패 패턴은 그것이 아닙니다: **결함이 `none`으로 오분류되는 비율이 가장 큽니다** — Scratch의 32%, Loc의 25%, Edge-Loc의 22%가 `none`으로 새어 나갑니다. 예상이 데이터와 달랐다는 사실을 그대로 남겨둡니다.
 
@@ -173,8 +177,9 @@ own macro-F1 기준(참고, as-reported는 클래스 집합이 셀마다 달라 
 ## 해석과 한계
 
 - **lot 분할도 배포 조건의 상한이 아닙니다.** 신제품 도입이나 레이아웃 변경으로 인한 분포 변화는 이 실험이 포착하지 못합니다. lot-disjoint 분할은 "같은 제품·같은 시기 안에서 다른 lot"을 흉내 낼 뿐입니다.
+- **고정 8,000-step 학습량은 cap 축(C)에서 중립적이지 않습니다.** `A3-B1-C1`은 약 110,665개 웨이퍼에 대해 ≈18.5 epoch을, `A3-B1-C3`는 약 857개에 대해 ≈2,400 epoch을 돕니다 — cap 효과에는 "데이터가 적다"는 것과 "그 적은 데이터를 훨씬 더 많이 반복한다"는 것이 뒤섞여 있습니다. 다만 이것이 −0.225를 설명하지는 못합니다: `A3-B1-C3-s0`의 training loss는 step 3,000경 이미 ~1e-3, step 6,000 이후로는 ~1e-4까지 떨어지고(`results/runs/A3-B1-C3-s0/train_log.csv`), 같은 run의 gold defect-F1은 step 1,000의 0.626에서 step 8,000의 0.606으로 평평하거나 오히려 소폭 하락합니다 — 즉 학습이 부족한 것이 아니라 이미 수렴(사실상 암기)한 상태입니다. 검증셋 기반으로 조기 종료했더라도 ≈0.63 수준이었을 것이고, 이는 여전히 C1보다 ≈0.20 낮습니다.
 - **패턴–원인 매핑(Scratch=취급 스크래치 등)은 공개 문헌의 일반론이지, 특정 팹의 지식이 아닙니다.**
-- **Donut(555장)과 Near-full(149장)은 gold셋에 각각 수십 장뿐입니다** — 이 실험은 이 두 클래스의 클래스별 F1에 대해 단정적인 결론을 내리지 않습니다.
+- **Donut(555장)과 Near-full(149장)은 gold셋에 각각 111장, 30장뿐입니다** — 이 실험은 이 두 클래스의 클래스별 F1에 대해 단정적인 결론을 내리지 않습니다.
 - **선행 연구 검색은 웹·arXiv·GitHub 범위로 한정했습니다.** "확인되지 않음"이지 "존재하지 않음"이 아닙니다.
 - **원본 Training/Test 라벨의 분할 기준은 공개 자료에 명시되어 있지 않습니다.** 이 문서에서는 관측된 성질(lot-disjoint, 유사-시간, 비층화)만 서술하고 "원본 제공 분할"로만 표기합니다.
 - 이 실험 전체는 프로토콜의 기여도를 측정하는 것이지, 어떤 논문의 숫자가 틀렸다고 주장하는 것이 아닙니다. 세 축(분할/클래스/cap) 각각이 다른 크기로 성능에 기여한다는 것, 그리고 그 크기가 서로 다르다는 것이 이 실험의 결과입니다.
@@ -209,6 +214,8 @@ python -m wm811k_audit.analyze
 # 테스트
 pytest -q
 ```
+
+GPU 실행은 seed별로 분포상으로는 재현되지만(`cudnn.benchmark=False`, seed 고정), `torch.use_deterministic_algorithms`는 켜지 않았으므로 완전한 bit-exact 재현은 아닙니다 — 계획서 §3.1의 "deterministic 최선 노력" 방침과 일치합니다.
 
 ## 인용
 

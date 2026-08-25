@@ -32,7 +32,7 @@ def main():
     assert s["class_counts"]["none"] == 147431 and s["class_counts"]["Near-full"] == 149, s["class_counts"]
     assert s["split_counts"] == {"Test": 118595, "Training": 54355}, s["split_counts"]
     assert s["orig_split_lots_with_both"] == 0, "original split is expected to be lot-disjoint"
-    assert set(np.unique(maps64[:20000]).tolist()) <= {0, 1, 2}
+    assert set(np.unique(maps64).tolist()) <= {0, 1, 2}
     print("all dataset-fact checks passed")
 
 

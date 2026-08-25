@@ -18,4 +18,4 @@
 | A3-B2-C1 | lot-group | 8 defect classes | no cap | 16,333 | 0.823 ± 0.003 | 0.829 ± 0.008 | — | 0.00 | 0.006 |
 | A3-B2-C2 | lot-group | 8 defect classes | cap 5000/class | 14,138 | 0.829 ± 0.005 | 0.827 ± 0.003 | — | 0.00 | 0.005 |
 | A3-B2-C3 | lot-group | 8 defect classes | balanced (min class) | 761 | 0.723 ± 0.038 | 0.616 ± 0.006 | — | 0.00 | 0.012 |
-| A4-B1-C1 | A4 | 9 classes | no cap | 110,665 | 0.571 ± 0.026 | 0.826 ± 0.003 | 0.830 ± 0.002 | 0.00 | 0.000 |
+| A4-B1-C1 | lot-ordered | 9 classes | no cap | 110,665 | 0.571 ± 0.026 | 0.826 ± 0.003 | 0.830 ± 0.002 | 0.00 | 0.000 |

@@ -1,8 +1,10 @@
+import json
+
 import numpy as np
 import pandas as pd
 import pytest
 
-from wm811k_audit.analyze import cell_summary, core_pairs, main_effects
+from wm811k_audit.analyze import cell_summary, confusion_table, core_pairs, main_effects, write_confusion_table
 from wm811k_audit.splits import all_cells
 
 
@@ -42,3 +44,50 @@ def test_core_pairs_keys_and_signs():
     assert cp["split"]["A2_within_model_gap"] == pytest.approx(
         cp["split"]["A2-B1-C1"]["own_defect_f1_mean"] - cp["split"]["A2-B1-C1"]["gold_defect_f1_mean"])
     assert cp["cap"]["A3-B1-C3"]["gold_defect_f1_mean"] < cp["cap"]["A3-B1-C1"]["gold_defect_f1_mean"]
+
+
+def _write_fake_gold_confusion_run(runs_dir, cell_id, seed, row0, row1):
+    d = runs_dir / f"{cell_id}-s{seed}"
+    d.mkdir(parents=True)
+    cm = [[0] * 9 for _ in range(9)]
+    cm[0] = row0
+    cm[1] = row1
+    (d / "metrics.json").write_text(json.dumps({"gold_full": {"confusion": cm}}))
+
+
+def test_confusion_table_sums_seeds_and_computes_recall(tmp_path):
+    runs_dir = tmp_path / "runs"
+    # seed 0: class 0 -> 8 correct + 2 to class 1 (support 10); class 1 -> 5 correct (support 5)
+    _write_fake_gold_confusion_run(runs_dir, "FAKE-B1-C1", 0,
+                                    row0=[8, 2, 0, 0, 0, 0, 0, 0, 0], row1=[0, 5, 0, 0, 0, 0, 0, 0, 0])
+    # seed 1: class 0 -> all 10 misclassified as class 1; class 1 -> 5 correct
+    _write_fake_gold_confusion_run(runs_dir, "FAKE-B1-C1", 1,
+                                    row0=[0, 10, 0, 0, 0, 0, 0, 0, 0], row1=[0, 5, 0, 0, 0, 0, 0, 0, 0])
+
+    t = confusion_table(runs_dir, "FAKE-B1-C1")
+    assert t is not None
+    assert t["support"][0] == pytest.approx(20) and t["support"][1] == pytest.approx(10)
+    assert t["cm"][0].tolist() == pytest.approx([8, 12, 0, 0, 0, 0, 0, 0, 0])
+    assert t["recall"][0] == pytest.approx(8 / 20)
+    assert t["recall"][1] == pytest.approx(1.0)
+    # unseen classes (zero support in every seed) must not raise a division error
+    assert t["support"][2:].sum() == 0 and np.isfinite(t["norm"][2:]).all()
+
+
+def test_confusion_table_returns_none_when_no_runs(tmp_path):
+    assert confusion_table(tmp_path / "runs", "MISSING-CELL") is None
+
+
+def test_write_confusion_table_writes_traceable_markdown(tmp_path):
+    runs_dir = tmp_path / "runs"
+    _write_fake_gold_confusion_run(runs_dir, "FAKE-B1-C1", 0,
+                                    row0=[8, 2, 0, 0, 0, 0, 0, 0, 0], row1=[0, 5, 0, 0, 0, 0, 0, 0, 0])
+    _write_fake_gold_confusion_run(runs_dir, "FAKE-B1-C1", 1,
+                                    row0=[0, 10, 0, 0, 0, 0, 0, 0, 0], row1=[0, 5, 0, 0, 0, 0, 0, 0, 0])
+    out_path = tmp_path / "tables" / "confusion_gold_FAKE-B1-C1.md"
+    t = write_confusion_table(runs_dir, "FAKE-B1-C1", out_path)
+    assert t is not None
+    text = out_path.read_text()
+    assert "FAKE-B1-C1" in text
+    assert "40.0" in text  # class-0 recall, 8/20
+    assert "20" in text  # class-0 gold support

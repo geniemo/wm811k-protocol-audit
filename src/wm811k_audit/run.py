@@ -36,7 +36,7 @@ class Dataset:
     gold_idx: np.ndarray
 
 
-def ensure_gold(meta: pd.DataFrame, processed_dir: Path):
+def ensure_gold(meta: pd.DataFrame, processed_dir: Path, min_share: float = 0.15, max_share: float = 0.25):
     processed_dir = Path(processed_dir)
     gpath, ppath = processed_dir / "gold_indices.npy", processed_dir / "pool_indices.npy"
     if gpath.exists() and ppath.exists():
@@ -53,6 +53,17 @@ def ensure_gold(meta: pd.DataFrame, processed_dir: Path):
         raise RuntimeError("gold and pool share row indices")
     if pool_set | gold_set != set(range(len(meta))):
         raise RuntimeError("gold and pool do not partition the labeled set")
+    labels = meta["label9"].values
+    n_classes = int(labels.max()) + 1
+    gold_present = set(labels[gold].tolist())
+    if gold_present != set(range(n_classes)):
+        raise RuntimeError(f"gold set is missing classes {set(range(n_classes)) - gold_present}")
+    gold_counts = np.bincount(labels[gold], minlength=n_classes)
+    total_counts = np.bincount(labels, minlength=n_classes)
+    shares = gold_counts / total_counts
+    bad = {i: float(sh) for i, sh in enumerate(shares) if not (min_share <= sh <= max_share)}
+    if bad:
+        raise RuntimeError(f"gold class shares outside [{min_share}, {max_share}]: {bad}")
     return pool, gold
 
 

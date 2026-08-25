@@ -2,6 +2,7 @@ import json
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from wm811k_audit.data import save_processed
 from wm811k_audit.run import RESULT_COLUMNS, completed_run_ids, ensure_gold, main
@@ -39,6 +40,47 @@ def test_main_runs_cells_writes_results_and_resumes(processed, tmp_path, capsys)
     main(argv)  # resume: nothing new
     assert len(pd.read_csv(out / "results.csv")) == 2
     assert "skip" in capsys.readouterr().out.lower()
+
+
+def _write_gold_pool(tmp_path, gold, pool):
+    np.save(tmp_path / "gold_indices.npy", np.asarray(gold, dtype=np.int64))
+    np.save(tmp_path / "pool_indices.npy", np.asarray(pool, dtype=np.int64))
+
+
+def test_ensure_gold_passes_real_carve_on_fixture(processed, tmp_path):
+    # spec-default band (15-25%) and full class presence, exercised on the real carve_gold output
+    maps64, meta = processed
+    save_processed(maps64, meta, tmp_path)
+    pool, gold = ensure_gold(meta, tmp_path)
+    labels = meta["label9"].values
+    n_classes = int(labels.max()) + 1
+    assert set(labels[gold].tolist()) == set(range(n_classes))
+
+
+def test_ensure_gold_rejects_missing_class(tmp_path):
+    # 2 lots, 2 classes; gold (lot "G") contains only class 0, class 1 lives entirely in pool
+    meta = pd.DataFrame({
+        "lot_id": ["G"] * 4 + ["P"] * 4,
+        "label9": [0, 0, 0, 0, 0, 0, 1, 1],
+    })
+    gold, pool = np.arange(0, 4), np.arange(4, 8)
+    _write_gold_pool(tmp_path, gold, pool)
+    with pytest.raises(RuntimeError, match="missing classes"):
+        ensure_gold(meta, tmp_path)
+
+
+def test_ensure_gold_rejects_share_outside_band(tmp_path):
+    # class 0: 1/10 in gold (10%, below the 15% floor); class 1: 4/20 in gold (20%, within band)
+    meta = pd.DataFrame({
+        "lot_id": ["G"] * 5 + ["P"] * 25,
+        "label9": [0] + [1] * 4 + [0] * 9 + [1] * 16,
+    })
+    gold, pool = np.arange(0, 5), np.arange(5, 30)
+    _write_gold_pool(tmp_path, gold, pool)
+    with pytest.raises(RuntimeError, match="share"):
+        ensure_gold(meta, tmp_path)
+    # the same gold/pool passes once the band is widened enough to admit the 10% class
+    ensure_gold(meta, tmp_path, min_share=0.05, max_share=0.5)
 
 
 def test_aux_a4_cell(processed, tmp_path):

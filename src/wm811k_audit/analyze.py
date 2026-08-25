@@ -14,7 +14,7 @@ from .constants import CLASS_NAMES, RESULTS_DIR
 
 SUMMARY_METRICS = ["own_macro_f1", "own_defect_f1", "gold_defect_f1", "gold_full_macro_f1"]
 AXES = {"split": ["A1", "A2", "A3"], "classes": ["B1", "B2"], "cap": ["C1", "C2", "C3"]}
-AXIS_LABELS = {"split": {"A1": "original", "A2": "random", "A3": "lot-group"},
+AXIS_LABELS = {"split": {"A1": "original", "A2": "random", "A3": "lot-group", "A4": "lot-ordered"},
                "classes": {"B1": "9 classes", "B2": "8 defect classes"},
                "cap": {"C1": "no cap", "C2": "cap 5000/class", "C3": "balanced (min class)"}}
 BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"
@@ -100,14 +100,18 @@ def write_tables(df: pd.DataFrame, out_dir: Path) -> dict:
                      f"{_fmt(r['gold_defect_f1_mean'], r['gold_defect_f1_std'])} | {gf} | {ls[cid]:.2f} | {dr[cid]:.3f} |")
     (out_dir / "cells.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    me_lines = ["| metric | axis | level means | range (max−min) | interaction RMS | interaction max |", "|---|---|---|---:|---:|---:|"]
+    me_lines = ["| metric | axis | level means | range (max−min) |", "|---|---|---|---:|"]
     effects = {}
     for metric in ("own_macro_f1", "gold_defect_f1"):
         me = main_effects(s, metric)
         effects[metric] = me
         for ax in AXES:
             lv = ", ".join(f"{AXIS_LABELS[ax][k]}={v:.3f}" for k, v in me["levels"][ax].items())
-            me_lines.append(f"| {metric} | {ax} | {lv} | {me['range'][ax]:.3f} | {me['interaction_rms']:.3f} | {me['interaction_max_abs']:.3f} |")
+            me_lines.append(f"| {metric} | {ax} | {lv} | {me['range'][ax]:.3f} |")
+    me_lines += ["", "Whole-model additive-fit residual (interaction), one value per metric — not per axis:", "",
+                 "| metric | interaction RMS | interaction max |", "|---|---:|---:|"]
+    for metric, me in effects.items():
+        me_lines.append(f"| {metric} | {me['interaction_rms']:.3f} | {me['interaction_max_abs']:.3f} |")
     (out_dir / "main_effects.md").write_text("\n".join(me_lines) + "\n", encoding="utf-8")
 
     cp = core_pairs(df)
@@ -135,6 +139,49 @@ def write_tables(df: pd.DataFrame, out_dir: Path) -> dict:
                                           "\n".join(f"| {i} | {r['own_macro_f1_std']:.4f} | {r['gold_defect_f1_std']:.4f} |" for i, r in noise.iterrows()) + "\n",
                                           encoding="utf-8")
     return dict(summary=s, effects=effects, core=cp)
+
+
+def confusion_table(runs_dir: Path, cell_id: str):
+    """Sum the gold 9-class confusion matrix across every seed of `cell_id` and return
+    the summed matrix, its row-normalised (%) version, per-class recall, and gold support.
+    Returns None if no run of this cell has a `gold_full` confusion matrix on disk."""
+    cms = []
+    for d in sorted(runs_dir.glob(f"{cell_id}-s*")):
+        mpath = d / "metrics.json"
+        if not mpath.exists():
+            continue
+        m = json.loads(mpath.read_text())
+        if m.get("gold_full"):
+            cms.append(np.array(m["gold_full"]["confusion"], dtype=float))
+    if not cms:
+        return None
+    cm = np.sum(cms, axis=0)
+    support = cm.sum(axis=1)
+    norm = cm / support.clip(min=1)[:, None]
+    recall = np.diag(norm)
+    return dict(cm=cm, norm=norm, recall=recall, support=support)
+
+
+def write_confusion_table(runs_dir: Path, cell_id: str, out_path: Path):
+    """Write the 9x9 row-normalised (%) gold confusion matrix for `cell_id`, plus a
+    per-class recall column and the gold support per class, to a committed markdown table
+    (this is the only place the per-class recall/confusion numbers shown in the README are
+    traceable from a fresh clone, since `results/runs/` itself is gitignored)."""
+    t = confusion_table(runs_dir, cell_id)
+    if t is None:
+        return None
+    norm, recall, support = t["norm"], t["recall"], t["support"]
+    header = "| true \\ predicted | " + " | ".join(CLASS_NAMES) + " | recall % | gold support |"
+    sep = "|---|" + "---:|" * (len(CLASS_NAMES) + 2)
+    lines = [f"# Gold 9-class confusion matrix — {cell_id}", "",
+             "Row-normalised percentages, 3 seeds summed. Same data as `results/figures/confusion_gold_A3-B1-C1.png`.",
+             "", header, sep]
+    for i, name in enumerate(CLASS_NAMES):
+        row = " | ".join(f"{100 * norm[i, j]:.1f}" for j in range(len(CLASS_NAMES)))
+        lines.append(f"| {name} | {row} | {100 * recall[i]:.1f} | {int(support[i]):,} |")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return t
 
 
 def _bar_pair(ax, labels, means, stds, colors, title, ylabel):
@@ -189,8 +236,8 @@ def plot_main_effects(effects: dict, out: Path):
             lv = effects[metric]["levels"][axis]
             xs = np.arange(len(lv))
             ax.plot(xs, list(lv.values()), marker="o", ms=6, lw=2, color=color, label=label)
-        labels = [AXIS_LABELS[axis][k].replace(" (", "\n(").replace("/class", "\n/class") for k in lv]
-        ax.set_xticks(np.arange(len(lv)), labels, rotation=0, fontsize=8)
+        labels = [AXIS_LABELS[axis][k].replace(" (", "\n(").replace("/class", "\n/class") for k in AXES[axis]]
+        ax.set_xticks(np.arange(len(labels)), labels, rotation=0, fontsize=8)
         ax.set_title(f"axis: {axis}", fontsize=10, loc="left")
         ax.grid(axis="x", visible=False)
     axes[0].set_ylabel("level mean over the other axes")
@@ -257,6 +304,7 @@ def main(argv=None):
     root = Path(args.results)
     df = load_results(root / "results.csv")
     tables = write_tables(df, root / "tables")
+    write_confusion_table(root / "runs", "A3-B1-C1", root / "tables" / "confusion_gold_A3-B1-C1.md")
     figs = root / "figures"
     figs.mkdir(exist_ok=True)
     plot_core_pair_split(tables["core"], figs / "core_pair_split.png")

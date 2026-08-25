@@ -1,0 +1,16 @@
+name: wm811k
+channels: [conda-forge]
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - --index-url https://download.pytorch.org/whl/cu128
+      - torch
+      - numpy
+      - pandas
+      - pyarrow
+      - scikit-learn
+      - scipy
+      - matplotlib
+      - pytest
+      - tqdm

@@ -48,8 +48,11 @@ def ensure_gold(meta: pd.DataFrame, processed_dir: Path):
     lots = meta["lot_id"].values
     if not set(lots[pool]).isdisjoint(set(lots[gold])):
         raise RuntimeError("gold and pool share lots")
-    if len(pool) + len(gold) != len(meta):
-        raise RuntimeError("gold/pool do not partition the labeled set")
+    pool_set, gold_set = set(pool.tolist()), set(gold.tolist())
+    if not pool_set.isdisjoint(gold_set):
+        raise RuntimeError("gold and pool share row indices")
+    if pool_set | gold_set != set(range(len(meta))):
+        raise RuntimeError("gold and pool do not partition the labeled set")
     return pool, gold
 
 
@@ -157,7 +160,7 @@ def main(argv=None):
     ds = load_dataset(Path(args.processed))
     device = torch.device(args.device)
     maps_t = torch.as_tensor(ds.maps64).to(device)
-    labels_t = torch.as_tensor(ds.meta["label9"].values, dtype=torch.long, device=device)
+    labels_t = torch.as_tensor(ds.meta["label9"].values.copy(), dtype=torch.long, device=device)
     csv_path = Path(args.out) / "results.csv"
     done = completed_run_ids(csv_path)
     todo = [(c, s) for c in cells for s in args.seeds if run_id_for(c, s, args.model) not in done]

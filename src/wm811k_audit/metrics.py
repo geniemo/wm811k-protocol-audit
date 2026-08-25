@@ -31,14 +31,24 @@ def defect_metrics(y_true, y_pred, n_pred_classes: int) -> dict:
     y_pred = np.asarray(y_pred)
     if y_true.size and (y_true.min() < 0 or y_true.max() > 7):
         raise ValueError("defect_metrics expects true labels in 0..7 (defect classes only)")
+    if y_true.size == 0:
+        return dict(
+            defect_f1=float("nan"),
+            defect_bacc=float("nan"),
+            per_class_f1=[0.0] * 8,
+            per_class_recall=[0.0] * 8,
+            support=[0] * 8,
+            n_classes_present=0,
+            confusion=np.zeros((8, n_pred_classes), dtype=int).tolist(),
+        )
     f1 = f1_score(y_true, y_pred, labels=DEFECT_IDX, average=None, zero_division=0)
     rec = recall_score(y_true, y_pred, labels=DEFECT_IDX, average=None, zero_division=0)
     support = np.bincount(y_true, minlength=8)[:8]
     present = support > 0
     cm = confusion_matrix(y_true, y_pred, labels=list(range(n_pred_classes)))[:8]
     return dict(
-        defect_f1=float(f1[present].mean()) if present.any() else float("nan"),
-        defect_bacc=float(rec[present].mean()) if present.any() else float("nan"),
+        defect_f1=float(f1[present].mean()) if present.any() else float("nan"),  # empty case handled above
+        defect_bacc=float(rec[present].mean()) if present.any() else float("nan"),  # empty case handled above
         per_class_f1=f1.tolist(),
         per_class_recall=rec.tolist(),
         support=support.tolist(),

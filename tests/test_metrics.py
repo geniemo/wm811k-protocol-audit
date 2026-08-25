@@ -43,3 +43,9 @@ def test_defect_metrics_averages_only_present_classes():
 def test_defect_metrics_rejects_none_in_truth():
     with pytest.raises(ValueError):
         defect_metrics(np.array([0, 8]), np.array([0, 8]), 9)
+
+
+def test_defect_metrics_empty_input_returns_nan():
+    m = defect_metrics(np.array([], dtype=int), np.array([], dtype=int), n_pred_classes=9)
+    assert np.isnan(m["defect_f1"]) and np.isnan(m["defect_bacc"]) and m["n_classes_present"] == 0
+    assert np.array(m["confusion"]).shape == (8, 9) and sum(m["support"]) == 0

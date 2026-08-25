@@ -24,7 +24,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 데이터 원천 | MIR 공식 배포본(`http://mirlab.org/dataset/public/MIR-WM811K.zip`)의 `WM811K.pkl`. 라벨된 웨이퍼 172,950장 |
+| 데이터 원천 | MIR 공식 배포본(`http://mirlab.org/dataSet/public/MIR-WM811K.zip`)의 `WM811K.pkl`. 라벨된 웨이퍼 172,950장 |
 | Gold 테스트셋 | `StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=20260825)`, `y=label9`, `groups=lot_id`, fold 0의 test 인덱스. 34,615장 (라벨 전체의 20.01%). 어떤 셀의 학습·분할·cap 추출에도 쓰이지 않음 |
 | Gold 인덱스 해시 | sha1 앞 12자리 `3a6030ac2ff1` (`data/processed/gold_indices.npy`) |
 | 리사이즈 | 64×64, 중심 정렬 nearest-neighbour (`floor((i+0.5)*H/64)`, 종횡비 보존 없음) |
@@ -215,4 +215,4 @@ pytest -q
 이 프로젝트는 MIR-WM811K 데이터셋을 사용합니다. 데이터셋 배포 조건에 따라 다음을 인용해야 합니다.
 
 - Wu, M.-J., Jang, J.-S. R., & Chen, J.-L. (2015). Wafer Map Failure Pattern Recognition and Similarity Ranking for Large-Scale Data Sets. *IEEE Transactions on Semiconductor Manufacturing*, 28(1), 1–12. doi: [10.1109/TSM.2014.2364237](https://doi.org/10.1109/TSM.2014.2364237)
-- 데이터셋 페이지: [MIR-WM811K, http://mirlab.org/dataset/public/](http://mirlab.org/dataset/public/)
+- 데이터셋 페이지: [MIR-WM811K, http://mirlab.org/dataSet/public/](http://mirlab.org/dataSet/public/)

@@ -91,3 +91,15 @@ def test_write_confusion_table_writes_traceable_markdown(tmp_path):
     assert "FAKE-B1-C1" in text
     assert "40.0" in text  # class-0 recall, 8/20
     assert "20" in text  # class-0 gold support
+
+
+def test_seed_run_dirs_excludes_model_suffixed_runs(tmp_path):
+    """`glob("A3-B1-C1-s*")` also matches "A3-B1-C1-s0-resnet18"; a table labelled as
+    one model must not silently average another model's runs into it."""
+    from wm811k_audit.analyze import seed_run_dirs
+
+    for name in ["A3-B1-C1-s0", "A3-B1-C1-s1", "A3-B1-C1-s10",
+                 "A3-B1-C1-s0-resnet18", "A3-B1-C1-s1-resnet18", "A3-B1-C1-sX"]:
+        (tmp_path / name).mkdir()
+    got = [d.name for d in seed_run_dirs(tmp_path, "A3-B1-C1")]
+    assert got == ["A3-B1-C1-s0", "A3-B1-C1-s1", "A3-B1-C1-s10"]

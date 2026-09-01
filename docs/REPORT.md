@@ -94,7 +94,7 @@
 
 **가설**: Edge-Loc과 Scratch는 둘 다 웨이퍼 가장자리에 붙은 길쭉한 형태의 결함 군집이라, 서로 혼동될 것이다.
 
-**결과**(`A3-B1-C1`, gold 9클래스, 3 seed 합산 confusion — `results/tables/confusion_gold_A3-B1-C1.md`): 실제 지배적인 실패 패턴은 Edge-Loc↔Scratch 혼동이 아니라 **결함이 `none`으로 새는 것**이었습니다. Scratch의 32%, Loc의 25%, Edge-Loc의 22%가 `none`으로 오분류됩니다. 클래스별 recall(%)은 none 100, Edge-Ring 96, Random 95, Near-full 93, Center 83, Edge-Loc 72, Donut 71, Loc 59, Scratch 56.
+**결과**(`A3-B1-C1`, gold 9클래스, 3 seed 합산 confusion — `results/tables/confusion_gold_A3-B1-C1.md`): 실제 지배적인 실패 패턴은 Edge-Loc↔Scratch 혼동이 아니라 **결함이 `none`으로 새는 것**이었습니다. Scratch의 32%, Loc의 25%, Edge-Loc의 22%가 `none`으로 오분류됩니다. 클래스별 recall(%)은 none 99.5, Edge-Ring 96, Random 95, Near-full 93, Center 83, Edge-Loc 72, Donut 71, Loc 59, Scratch 56.
 
 **해석**: 팹 관점에서 이건 "다른 결함으로 잘못 분류하는" 문제가 아니라 **결함을 놓치는(missed detection) 문제**입니다. 두 문제는 운영상 대응이 다릅니다 — 오분류는 재분류·재검토로 대응하지만, 미탐지는 애초에 알람이 안 뜨는 문제라 검출 임계값이나 클래스 불균형 처리 쪽을 봐야 합니다.
 

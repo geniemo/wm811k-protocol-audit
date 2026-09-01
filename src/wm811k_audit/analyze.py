@@ -1,6 +1,7 @@
 """Turn results.csv + per-run artifacts into the tables and figures the README uses."""
 import argparse
 import json
+import re
 from pathlib import Path
 
 import matplotlib
@@ -11,6 +12,16 @@ import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
 
 from .constants import CLASS_NAMES, RESULTS_DIR
+
+def seed_run_dirs(runs_dir: Path, cell_id: str) -> list:
+    """Run directories for `cell_id`'s default-model seeds only.
+
+    `glob("A3-B1-C1-s*")` also matches `A3-B1-C1-s0-resnet18`, which would silently
+    average a second model's predictions into a table labelled as the first one's.
+    Match `-s<digits>` at the end of the name so model-suffixed runs are excluded.
+    """
+    return sorted(d for d in runs_dir.glob(f"{cell_id}-s*") if re.fullmatch(r"-s\d+", d.name[len(cell_id):]))
+
 
 SUMMARY_METRICS = ["own_macro_f1", "own_defect_f1", "gold_defect_f1", "gold_full_macro_f1"]
 AXES = {"split": ["A1", "A2", "A3"], "classes": ["B1", "B2"], "cap": ["C1", "C2", "C3"]}
@@ -146,7 +157,7 @@ def confusion_table(runs_dir: Path, cell_id: str):
     the summed matrix, its row-normalised (%) version, per-class recall, and gold support.
     Returns None if no run of this cell has a `gold_full` confusion matrix on disk."""
     cms = []
-    for d in sorted(runs_dir.glob(f"{cell_id}-s*")):
+    for d in seed_run_dirs(runs_dir, cell_id):
         mpath = d / "metrics.json"
         if not mpath.exists():
             continue
@@ -250,7 +261,7 @@ def plot_main_effects(effects: dict, out: Path):
 
 def plot_confusion(runs_dir: Path, cell_id: str, out: Path):
     cms = []
-    for d in sorted(runs_dir.glob(f"{cell_id}-s*")):
+    for d in seed_run_dirs(runs_dir, cell_id):
         m = json.loads((d / "metrics.json").read_text())
         if m.get("gold_full"):
             cms.append(np.array(m["gold_full"]["confusion"], dtype=float))

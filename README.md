@@ -152,7 +152,7 @@ own macro-F1 기준(참고, as-reported는 클래스 집합이 셀마다 달라 
 
 전체 숫자(9×9 row-normalised %, per-class recall, gold support)는 [`results/tables/confusion_gold_A3-B1-C1.md`](results/tables/confusion_gold_A3-B1-C1.md)에 커밋되어 있습니다 — `results/runs/`는 gitignore 대상이라, 클론한 저장소에서 아래 수치들을 확인할 수 있는 유일한 출처입니다.
 
-클래스별 recall(%, 3 seed 합산): none 100, Edge-Ring 96, Random 95, Near-full 93, Center 83, Edge-Loc 72, Donut 71, Loc 59, Scratch 56.
+클래스별 recall(%, 3 seed 합산): none 99.5, Edge-Ring 96, Random 95, Near-full 93, Center 83, Edge-Loc 72, Donut 71, Loc 59, Scratch 56.
 
 실험 설계 단계에서는 Edge-Loc과 Scratch가 서로 혼동될 것이라 예상했지만, 실제 confusion matrix가 보여주는 지배적인 실패 패턴은 그것이 아닙니다: **결함이 `none`으로 오분류되는 비율이 가장 큽니다** — Scratch의 32%, Loc의 25%, Edge-Loc의 22%가 `none`으로 새어 나갑니다. 예상이 데이터와 달랐다는 사실을 그대로 남겨둡니다.
 
